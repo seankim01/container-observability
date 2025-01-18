@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: adot-collector
+  name: adot-md-trace-tempo
+
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  namespace: adot-collector
+  name: adot-md-trace-tempo
+spec:
+  config: |
+    extensions:
+      health_check:
+
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+          grpc:
+            endpoint: 0.0.0.0:4317
+  
+    processors:
+      batch/traces:
+        timeout: 60s
+        send_batch_size: 50
+  
+    exporters:
+      otlphttp:
+        endpoint: http://tempo.observability:4318
+        tls:
+          insecure: true
+    
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch/traces]
+          exporters: [otlphttp]

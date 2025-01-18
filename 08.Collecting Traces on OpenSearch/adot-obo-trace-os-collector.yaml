@@ -1,0 +1,52 @@
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  namespace: adot-collector
+  name: adot-obo-trace-os
+spec:
+  mode: deployment
+  replicas: 1
+  serviceAccount: adot-obo-trace-os
+  resources:
+    limits:
+      cpu: 200m
+      memory: 400Mi
+    requests:
+      cpu: 200m
+      memory: 400Mi
+
+  config: |
+    extensions:
+      health_check:
+      sigv4auth:
+        region: ""
+        service: "osis"
+
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    
+    exporters:
+      otlphttp:
+        traces_endpoint: "https:///v1/traces"
+        auth:
+          authenticator: sigv4auth
+        compression: none
+    
+    processors:
+      batch/traces:
+        timeout: 1s
+        send_batch_size: 50
+    
+    service:
+      extensions: [health_check, sigv4auth]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch/traces]
+          exporters: [otlphttp]

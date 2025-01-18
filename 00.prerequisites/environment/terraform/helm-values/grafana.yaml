@@ -1,0 +1,58 @@
+replicas: 1
+
+service:
+  type: "ClusterIP" # Do not set 'Loadbalacner' Type here. Set in workshop because of helm charts (aws-loadbalancer-controller, grafana) dependencies.
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-security-groups: "${svc_sg}"
+
+env:
+  AWS_REGION: "${region}"
+  AWS_SDK_LOAD_CONFIG: "true"
+  GF_AUTH_SIGV4_AUTH_ENABLED: "true"
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: "eks-ob-amp"
+      type: "prometheus"
+      url: "${amp_eks_ob}"
+      access: "proxy"
+      isDefault: false
+      jsonData:
+        sigV4Auth: true
+        sigV4AuthType: "default"
+        sigV4Region: "${region}"
+    - name: "eks-ob-loki"
+      type: "loki"
+      url: "http://loki.observability:3100"
+      access: "proxy"
+      isDefault: false
+    - name: "eks-ob-tempo"
+      type: "tempo"
+      url: "http://tempo.observability:3100"
+      access: "proxy"
+      isDefault: false
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: "default"
+      orgId: 1
+      folder: ""
+      type: "file"
+      disableDeletion: false
+      editable: true
+      options:
+        path: "/var/lib/grafana/dashboards/default"
+
+dashboards:
+  default:
+    kubernetes-cluster-monitoring-via-prometheus:
+      gnetId: 3119
+      revision: 2
+      datasource: "eks-ob-amp"

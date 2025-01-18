@@ -1,0 +1,46 @@
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  namespace: adot-collector
+  name: adot-obo-trace-xray
+spec:
+  mode: deployment
+  replicas: 1
+  serviceAccount: adot-obo-trace-xray
+  resources:
+    limits:
+      cpu: 200m
+      memory: 400Mi
+    requests:
+      cpu: 200m
+      memory: 400Mi
+
+  config: |
+    extensions:
+      health_check:
+
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+        
+    exporters:
+      awsxray:
+        region: ""
+        
+    processors:
+      batch/traces:
+        timeout: 1s
+        send_batch_size: 50
+        
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch/traces]
+          exporters: [awsxray]

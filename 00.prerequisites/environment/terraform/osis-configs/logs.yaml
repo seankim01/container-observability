@@ -1,0 +1,27 @@
+# ref : https://github.com/aws-samples/observability-with-amazon-opensearch/blob/main/cf-templates/osi.yaml
+version: "2"
+otel-logs-pipeline:
+  source:
+    otel_logs_source:
+      path: "/v1/logs"
+  processor:
+  - parse_json:
+      source: "body"
+  - parse_json:
+      source: "kubernetes"
+  - parse_json:
+      source: "annotations"
+  - parse_json:
+      source: "labels"
+  - delete_entries:
+      with_keys: ["body", "kubernetes", "annotations", "labels"]
+  - date:
+      from_time_received: true
+      destination: "@timestamp"
+  sink:
+  - opensearch:
+      index: "ob-eks-logs-%%{yyyy.MM.dd}"
+      hosts: ["https://${opensearch_endpoint}"]
+      aws:
+        sts_role_arn: "${sts_role_arn}"
+        region: "${region}"

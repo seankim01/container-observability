@@ -1,0 +1,191 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: adot-collector
+  name: adot-obo-log-loki
+
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  namespace: adot-collector
+  name: adot-obo-log-loki
+spec:
+  mode: daemonset
+  serviceAccount: adot-obo-log-loki
+  securityContext:
+    runAsUser: 0
+    runAsGroup: 0
+  hostNetwork: false
+  resources:
+    limits:
+      cpu: 200m
+      memory: 400Mi
+    requests:
+      cpu: 200m
+      memory: 400Mi
+
+  env:
+  - name: CLUSTER_NAME
+    value: eks-adot-ob-eks
+  - name: K8S_NODE_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: spec.nodeName
+  - name: HOST_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  - name: HOST_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: spec.nodeName
+  - name: K8S_NAMESPACE
+    valueFrom:
+       fieldRef:
+         fieldPath: metadata.namespace
+
+  volumes:
+  - name: rootfs
+    hostPath:
+      path: /
+  - name: dockersock
+    hostPath:
+      path: /var/run/docker.sock
+  - name: varlibdocker
+    hostPath:
+      path: /var/lib/docker
+  - name: containerdsock
+    hostPath:
+      path: /run/containerd/containerd.sock
+  - name: sys
+    hostPath:
+      path: /sys
+  - name: devdisk
+    hostPath:
+      path: /dev/disk/
+  - name: varlogpods
+    hostPath:
+      path: /var/log/pods
+
+  volumeMounts:
+  - name: rootfs
+    mountPath: /rootfs
+    readOnly: true
+  - name: dockersock
+    mountPath: /var/run/docker.sock
+    readOnly: true
+  - name: containerdsock
+    mountPath: /run/containerd/containerd.sock
+  - name: varlibdocker
+    mountPath: /var/lib/docker
+    readOnly: true
+  - name: sys
+    mountPath: /sys
+    readOnly: true
+  - name: devdisk
+    mountPath: /dev/disk
+    readOnly: true
+  - name: varlogpods
+    mountPath: /var/log/pods
+    readOnly: true
+
+  config: |
+    extensions:
+      health_check:
+
+    receivers:
+      filelog:
+        include:
+        - /var/log/pods/*/*/*.log
+        exclude:
+        # Exclude logs from all containers named otel-collector
+        - /var/log/pods/*/otc-container/*.log
+        start_at: beginning
+        include_file_path: true
+        include_file_name: false
+        operators:
+        # Find out which format is used by kubernetes
+        - type: router
+          id: get-format
+          routes:
+          - output: parser-docker
+            expr: 'body matches "^\\{"'
+          - output: parser-crio
+            expr: 'body matches "^[^ Z]+ "'
+          - output: parser-containerd
+            expr: 'body matches "^[^ Z]+Z"'
+        # Parse CRI-O format
+        - type: regex_parser
+          id: parser-crio
+          regex:
+            '^(?P<time>[^ Z]+) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*)
+            ?(?P<log>.*)$'
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout_type: gotime
+            layout: '2006-01-02T15:04:05.999999999Z07:00'
+        # Parse CRI-Containerd format
+        - type: regex_parser
+          id: parser-containerd
+          regex:
+            '^(?P<time>[^ ^Z]+Z) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*)
+            ?(?P<log>.*)$'
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        # Parse Docker format
+        - type: json_parser
+          id: parser-docker
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        - type: move
+          from: attributes.log
+          to: body
+        # Extract metadata from file path
+        - type: regex_parser
+          id: extract_metadata_from_filepath
+          regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
+          parse_from: attributes["log.file.path"]
+          cache:
+            size: 128 # default maximum amount of Pods per Node is 110
+        # Rename attributes
+        - type: move
+          from: attributes.stream
+          to: attributes["log.iostream"]
+        - type: move
+          from: attributes.container_name
+          to: resource["k8s.container.name"]
+        - type: move
+          from: attributes.namespace
+          to: resource["k8s.namespace.name"]
+        - type: move
+          from: attributes.pod_name
+          to: resource["k8s.pod.name"]
+        - type: move
+          from: attributes.restart_count
+          to: resource["k8s.container.restart_count"]
+        - type: add
+          value: $CLUSTER_NAME
+          field: resource["k8s.cluster.name"]
+
+    processors:
+      batch/logs:
+
+    exporters:
+      otlphttp:
+        logs_endpoint: "http://loki.observability:3100/otlp/v1/logs"
+        compression: none
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        logs:
+          receivers: [filelog]
+          processors: [batch/logs]
+          exporters: [otlphttp]

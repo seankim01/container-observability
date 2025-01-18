@@ -1,0 +1,15 @@
+# ref : https://github.com/aws-samples/observability-with-amazon-opensearch/blob/main/cf-templates/osi.yaml
+version: "2"
+otel-metrics-pipeline:
+  source:
+    otel_metrics_source:
+      path: "/v1/metrics"
+  processor:
+  - otel_metrics:
+  sink:
+  - opensearch:
+      index: "ob-eks-metrics-%%{yyyy.MM.dd}"
+      hosts: ["https://${opensearch_endpoint}"]
+      aws:
+        sts_role_arn: "${sts_role_arn}"
+        region: "${region}"

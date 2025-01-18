@@ -1,0 +1,39 @@
+# ref : https://github.com/aws-samples/observability-with-amazon-opensearch/blob/main/cf-templates/osi.yaml
+version: "2"
+entry-pipeline:
+  source:
+    otel_trace_source:
+      path: "/v1/traces"
+  processor:
+  - trace_peer_forwarder:
+  sink:
+  - pipeline:
+      name: "span-pipeline"
+  - pipeline:
+      name: "service-map-pipeline"
+span-pipeline:
+  source:
+    pipeline:
+      name: "entry-pipeline"
+  processor:
+  - otel_traces:
+  sink:
+  - opensearch:
+      index_type: "trace-analytics-raw"
+      hosts: ["https://${opensearch_endpoint}"]
+      aws:
+        sts_role_arn: "${sts_role_arn}"
+        region: "${region}"
+service-map-pipeline:
+  source:
+    pipeline:
+      name: "entry-pipeline"
+  processor:
+  - service_map:
+  sink:
+  - opensearch:
+      index_type: "trace-analytics-service-map"
+      hosts: ["https://${opensearch_endpoint}"]
+      aws:
+        sts_role_arn: "${sts_role_arn}"
+        region: "${region}"
