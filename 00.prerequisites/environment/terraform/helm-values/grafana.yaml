@@ -1,5 +1,12 @@
 replicas: 1
 
+persistence:
+  enabled: true
+  storageClassName: "gp2"
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
 service:
   type: "ClusterIP" # Do not set 'Loadbalacner' Type here. Set in workshop because of helm charts (aws-loadbalancer-controller, grafana) dependencies.
   annotations:
@@ -17,42 +24,42 @@ datasources:
   datasources.yaml:
     apiVersion: 1
     datasources:
-    - name: "eks-ob-amp"
-      type: "prometheus"
-      url: "${amp_eks_ob}"
-      access: "proxy"
-      isDefault: false
-      jsonData:
-        sigV4Auth: true
-        sigV4AuthType: "default"
-        sigV4Region: "${region}"
-    - name: "eks-ob-loki"
-      type: "loki"
-      url: "http://loki.observability:3100"
-      access: "proxy"
-      isDefault: false
-    - name: "eks-ob-tempo"
-      type: "tempo"
-      url: "http://tempo.observability:3100"
-      access: "proxy"
-      isDefault: false
+      - name: "eks-ob-prometheus"
+        type: "prometheus"
+        url: "http://prometheus-server.adot-collector.svc.cluster.local"
+        access: "proxy"
+        isDefault: false
+        jsonData:
+          sigV4Auth: true
+          sigV4AuthType: "default"
+          sigV4Region: "${region}"
+      - name: "eks-ob-loki"
+        type: "loki"
+        url: "http://loki.adot-collector:3100"
+        access: "proxy"
+        isDefault: false
+      - name: "eks-ob-tempo"
+        type: "tempo"
+        url: "http://tempo.adot-collector:3100"
+        access: "proxy"
+        isDefault: false
 
 dashboardProviders:
   dashboardproviders.yaml:
     apiVersion: 1
     providers:
-    - name: "default"
-      orgId: 1
-      folder: ""
-      type: "file"
-      disableDeletion: false
-      editable: true
-      options:
-        path: "/var/lib/grafana/dashboards/default"
+      - name: "default"
+        orgId: 1
+        folder: ""
+        type: "file"
+        disableDeletion: false
+        editable: true
+        options:
+          path: "/var/lib/grafana/dashboards/default"
 
 dashboards:
   default:
     kubernetes-cluster-monitoring-via-prometheus:
       gnetId: 3119
       revision: 2
-      datasource: "eks-ob-amp"
+      datasource: "eks-ob-prometheus"

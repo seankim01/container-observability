@@ -24,8 +24,9 @@ spec:
       memory: 400Mi
 
   env:
-  - name: CLUSTER_NAME
-    value: eks-adot-ob-eks
+    - name: CLUSTER_NAME
+      #value: eks-adot-ob-eks
+      value: hcs-blue-eks-cluster
 
   config: |
     extensions:
@@ -41,7 +42,7 @@ spec:
         
     exporters:
       otlphttp:
-        endpoint: http://tempo.observability:4318
+        endpoint: http://tempo.adot-collector:4318
         tls:
           insecure: true
         
