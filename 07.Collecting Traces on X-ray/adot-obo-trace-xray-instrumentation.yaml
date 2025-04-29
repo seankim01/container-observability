@@ -6,9 +6,10 @@ metadata:
 spec:
   exporter:
     endpoint: http://adot-obo-trace-xray-collector.adot-collector.svc.cluster.local:4318
+    #endpoint: http://adot-obo-trace-xray.adot-collector.svc.cluster.local:4318
   propagators:
-  - tracecontext
-  - baggage
+    - tracecontext
+    - baggage
   sampler:
     type: parentbased_traceidratio
     argument: "1"

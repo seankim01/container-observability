@@ -30,7 +30,7 @@ spec:
         
     exporters:
       awsxray:
-        region: ""
+        region: "ap-norhteast-2"
         
     processors:
       batch/traces:
