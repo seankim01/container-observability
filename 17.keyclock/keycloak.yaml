@@ -28,7 +28,7 @@ metadata:
     alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
     alb.ingress.kubernetes.io/success-codes: '200-399'
-    alb.ingress.kubernetes.io/certificate-arn: <ACM ARN>
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:446805103418:certificate/e93c75b9-7009-42c3-9aae-93cd5083be2a
     alb.ingress.kubernetes.io/backend-protocol: HTTP
 spec:
   ingressClassName: alb
@@ -66,7 +66,8 @@ spec:
     spec:
       containers:
       - name: keycloak
-        image: quay.io/keycloak/keycloak:18.0.0
+        #image: quay.io/keycloak/keycloak:18.0.0
+        image: quay.io/keycloak/keycloak:25.0
         args: ["start-dev"]
         env:
         - name: KEYCLOAK_ADMIN
@@ -113,8 +114,9 @@ metadata:
   namespace: keycloak
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: gp2
+    #- ReadWriteOnce
+    - ReadWriteMany
+  storageClassName: efs-sc
   resources:
     requests:
-      storage: 5Gi
+      storage: 10Gi

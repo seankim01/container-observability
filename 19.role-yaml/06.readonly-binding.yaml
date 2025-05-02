@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: readonly-group-binding
+subjects:
+  # - kind: Group
+  #   name: readonly-group # aws-auth에서 정의한 그룹 이름
+  #   apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: oidc
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: readonly-clusterrole # 위에서 생성한 ClusterRole 이름
+  apiGroup: rbac.authorization.k8s.io

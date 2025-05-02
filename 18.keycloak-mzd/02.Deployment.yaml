@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          #image: 629822539430.dkr.ecr.ap-northeast-2.amazonaws.com/dev-keycloak:233
+          #image: quay.io/keycloak/keycloak:21.0.2
+          image: quay.io/keycloak/keycloak:25.0
+          args:
+            [
+              "start --spi-connections-http-client-default-reuse-connections=false --spi-connections-http-client-default-socket-timeout-millis=60000 --spi-dblock-jpa-lock-wait-timeout=900 --spi-otp-application-freeotp-enabled=false --spi-otp-application-microsoft-authenticator-enabled=false --log-level=INFO,org.keycloak:INFO,org.jgroups.protocols:ERROR,org.keycloak.transaction:ERROR,io.quarkus.vertx.http.runtime:ERROR,org.keycloak.services.resources:ERROR",
+            ]
+          #args: ["start-dev"]
+          env:
+            - name: JAVA_OPTS_APPEND
+              value: "-Djgroups.dns.query=keycloak-headless.keycloak.svc"
+            - name: KC_HOSTNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KC_HOSTNAME
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KEYCLOAK_ADMIN
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_DB
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KC_DB
+            - name: KC_DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KC_DB_URL
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KC_DB_USERNAME
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KC_DB_PASSWORD
+            - name: KC_DB_POOL_MAX_SIZE
+              value: "200"
+            - name: KC_CACHE_STACK
+              value: "kubernetes"
+            - name: KC_PROXY
+              value: edge
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
+            - name: TZ
+              value: Asia/Seoul
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: infinispan
+              containerPort: 7800
+          readinessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      # nodeSelector:
+      #   role: keycloak

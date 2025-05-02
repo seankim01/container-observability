@@ -1,0 +1,179 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak
+  namespace: keycloak
+type: Opaque
+data:
+  KC_HOSTNAME: a2V5Y2xvYWsuaW5zcGlyZS13YXIuc2hvcA==
+  KEYCLOAK_ADMIN: YWRtaW4=
+  KEYCLOAK_ADMIN_PASSWORD: MXFhMndzIUA=
+  KC_DB: a2V5Y2xvYWs=
+  KC_DB_URL: amRiYzpwb3N0Z3Jlc3FsOi8vaGNzLXBvYy1yZHMta2V5Y2xvYWstcG9jLmNqaXFmOGFqbDh4dS5hcC1ub3J0aGVhc3QtMi5yZHMuYW1hem9uYXdzLmNvbS9rZXljbG9haw==
+  KC_DB_USERNAME: a2V5Y2xvYWs=
+  KC_DB_PASSWORD: MXFhMndzIVA=
+---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: keycloak
+#   labels:
+#     app: keycloak
+# spec:
+#   ports:
+#     - name: https
+#       port: 443
+#       targetPort: 8443
+#   selector:
+#     app: keycloak
+#   type: ClusterIP
+#   clusterIP: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+  namespace: keycloak    
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:20.0.2
+          args: ["start", "--cache-stack=kubernetes"]
+          volumeMounts:
+            # - name: certs
+            #   mountPath: "/etc/certs"
+            #   readOnly: true
+            # -  name: keycloak-persistent-storage
+            #    mountPath: "/opt/jboss/keycloak/startup/elements"              
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: "admin"              
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: "admin"
+            # - name: KC_HTTPS_CERTIFICATE_FILE
+            #   value: "/etc/certs/tls.crt"
+            # - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+            #   value: "/etc/certs/tls.key"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
+            - name: KC_HOSTNAME
+              value: keycloak.inspire-war.shop
+            - name: KC_PROXY
+              value: "edge"
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              #value: "jdbc:postgresql://keycloak-db-postgresql-ha-pgpool/postgres"
+              value: "jdbc:postgresql://hcs-poc-rds-keycloak-poc.cjiqf8ajl8xu.ap-northeast-2.rds.amazonaws.com/keycloak"
+            - name: KC_DB_USERNAME
+              value: "keycloak"
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: KC_DB_PASSWORD
+            - name: jgroups.dns.query
+              value: keycloak
+          # ports:
+          #   - name: jgroups
+          #     containerPort: 7600
+          #   - name: https
+          #     containerPort: 8443
+          # readinessProbe:
+          #   httpGet:
+          #     scheme: HTTPS
+          #     path: /health/ready
+          #     port: 8443
+          #   initialDelaySeconds: 60
+          #   periodSeconds: 1
+          ports:
+          - name: http
+            containerPort: 8080 
+          readinessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+      volumes:
+        # - name: certs
+        #   secret:
+        #     secretName: auth-tls-secret      
+        # - name: keycloak-persistent-storage
+        #   persistentVolumeClaim:
+        #     claimName: keycloak-pvc-development            
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+  namespace: keycloak
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: keycloak
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  namespace: keycloak
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/load-balancer-name: keycloak-alb-ingress
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/success-codes: '200-399'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:446805103418:certificate/e93c75b9-7009-42c3-9aae-93cd5083be2a
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+spec:
+  ingressClassName: alb
+  tls:
+    - hosts:
+        - "keycloak.inspire-war.shop"
+  rules:
+    - host: "keycloak.inspire-war.shop"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
+---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: keycloak-pvc-development
+#   namespace: keycloak
+# spec:
+#   accessModes:
+#     #- ReadWriteOnce
+#     - ReadWriteMany
+#   storageClassName: efs-sc
+#   resources:
+#     requests:
+#       storage: 10Gi
+---
