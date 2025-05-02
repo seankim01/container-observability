@@ -7,7 +7,7 @@ subjects:
   #   name: readonly-group # aws-auth에서 정의한 그룹 이름
   #   apiGroup: rbac.authorization.k8s.io
   - kind: User
-    name: oidc
+    name: eks-user
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
