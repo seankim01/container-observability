@@ -18,8 +18,9 @@ spec:
       containers:
         - name: keycloak
           #image: 629822539430.dkr.ecr.ap-northeast-2.amazonaws.com/dev-keycloak:233
-          #image: quay.io/keycloak/keycloak:21.0.2
-          image: quay.io/keycloak/keycloak:25.0
+          image: quay.io/keycloak/keycloak:21.0.2
+          #image: quay.io/keycloak/keycloak:25.0
+          #image: quay.io/keycloak/keycloak:18.0.0
           args:
             [
               "start --spi-connections-http-client-default-reuse-connections=false --spi-connections-http-client-default-socket-timeout-millis=60000 --spi-dblock-jpa-lock-wait-timeout=900 --spi-otp-application-freeotp-enabled=false --spi-otp-application-microsoft-authenticator-enabled=false --log-level=INFO,org.keycloak:INFO,org.jgroups.protocols:ERROR,org.keycloak.transaction:ERROR,io.quarkus.vertx.http.runtime:ERROR,org.keycloak.services.resources:ERROR",

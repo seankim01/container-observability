@@ -7,15 +7,15 @@ metadata:
     app: keycloak
   annotations:
     alb.ingress.kubernetes.io/healthcheck-path: /realms/master
-    prometheus.io/scrape: 'false'
-    # service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing" 
+    prometheus.io/scrape: "false"
+    # service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
     # service.beta.kubernetes.io/aws-load-balancer-type: nlb
     # external-dns.alpha.kubernetes.io/hostname: keycloak.eksoffer.shop
     # service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:ap-southeast-1:446805103418:certificate/c5a0237d-600c-4306-9c55-850c42680625
-    # service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip    
+    # service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
     # #service.beta.kubernetes.io/aws-load-balancer-backend-protocol: 'http'
     # #service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: stickiness.enabled=true,stickiness.type=source_ip
-    # #service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 'HTTPS'  
+    # #service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 'HTTPS'
 spec:
   ports:
     - name: http
@@ -36,14 +36,14 @@ metadata:
   name: keycloak
   namespace: keycloak
   annotations:
-    kubernetes.io/ingress.class: alb
+    #kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/backend-protocol: HTTPS
     alb.ingress.kubernetes.io/load-balancer-name: keycloak-alb-ingress
     alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
-    alb.ingress.kubernetes.io/success-codes: '200-399'
+    alb.ingress.kubernetes.io/success-codes: "200-399"
     #alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=60
     # alb.ingress.kubernetes.io/ssl-passthrough: "true"
     # alb.ingress.kubernetes.io/description: 'alb ingress controller'
@@ -52,9 +52,10 @@ metadata:
     #alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 8080},{"HTTPS": 8443}]'
     #alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:446805103418:certificate/e93c75b9-7009-42c3-9aae-93cd5083be2a
-    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    #alb.ingress.kubernetes.io/backend-protocol: HTTP
     #alb.ingress.kubernetes.io/ssl-redirect: '8443'
     #alb.ingress.kubernetes.io/actions.redirect-to-https: '{"Type":"redirect","RedirectConfig":{"Port":"443","Protocol":"HTTPS","StatusCode":"HTTP_301"}}'
+    external-dns.alpha.kubernetes.io/hostname: "keycloak.inspire-war.shop" # DNS 설정
 spec:
   ingressClassName: alb
   tls:
@@ -72,3 +73,4 @@ spec:
                 port:
                   number: 8080
 ---
+
